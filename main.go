@@ -1,12 +1,15 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/jkuri/http-rtmp-multiplex-server/rtmp"
 	"github.com/nareix/joy4/av/avutil"
@@ -15,6 +18,12 @@ import (
 	"github.com/nareix/joy4/format/flv"
 	"github.com/soheilhy/cmux"
 )
+
+var (
+	port int
+	logger = log.New(os.Stdout, "http: ", log.LstdFlags)
+)
+
 
 func init() {
 	format.RegisterAll()
@@ -31,6 +40,9 @@ func (wf writeFlusher) Flush() error {
 }
 
 func main() {
+	flag.IntVar(&port, "port", 1935, "TCP port to run on")
+	flag.Parse()
+
 	server := &rtmp.Server{}
 	l := &sync.RWMutex{}
 
@@ -40,25 +52,41 @@ func main() {
 	channels := map[string]*Channel{}
 
 	server.HandlePlay = func(conn *rtmp.Conn) {
+		defer conn.Close()
+
 		l.RLock()
 		ch := channels[conn.URL.Path]
 		l.RUnlock()
 
+		log.Println("Try playing", conn.URL.Path)
 		if ch != nil {
-			cursor := ch.que.Latest()
-			avutil.CopyFile(conn, cursor)
+			if err := avutil.CopyFile(conn, ch.que.Latest()); err != nil && err != io.EOF {
+				log.Println("Unable to serve stream:", err)
+			}
+			//cursor := ch.que.Latest()
+			//avutil.CopyFile(conn, cursor)
+		} else {
+			// Keep connect for 2 sec and close
+			log.Println("No such channel yet:", conn.URL.Path)
+			time.Sleep(time.Second * 2)
 		}
 	}
 
 	server.HandlePublish = func(conn *rtmp.Conn) {
-		streams, _ := conn.Streams()
+		defer conn.Close()
+
+		streams, err := conn.Streams()
+		if err != nil {
+			log.Println("Unable to stream:", err)
+			return
+		}
 
 		l.Lock()
 		ch := channels[conn.URL.Path]
 		if ch == nil {
 			ch = &Channel{}
 			ch.que = pubsub.NewQueue()
-			ch.que.WriteHeader(streams)
+			_ = ch.que.WriteHeader(streams)
 			channels[conn.URL.Path] = ch
 		} else {
 			ch = nil
@@ -67,10 +95,16 @@ func main() {
 		if ch == nil {
 			return
 		}
+		logger.Println("Started streaming", conn.URL.Path)
 
-		avutil.CopyPackets(ch.que, conn)
+		if err := avutil.CopyPackets(ch.que, conn); err == io.EOF {
+			log.Println("Stopped streaming", conn.URL.Path)
+		} else if err != nil {
+			log.Printf("Unable to stream %v: %v", conn.URL.Path, err)
+		}
 
 		l.Lock()
+		logger.Printf("Stopped streaming %v\n", conn.URL.Path)
 		delete(channels, conn.URL.Path)
 		l.Unlock()
 		ch.que.Close()
@@ -103,7 +137,7 @@ func main() {
 	router := http.NewServeMux()
 	router.Handle("/", httpFlvHandler())
 
-	ln, err := net.Listen("tcp", ":8300")
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -113,17 +147,26 @@ func main() {
 	httpL := m.Match(cmux.HTTP1Fast())
 	rtmpL := m.Match(cmux.Any())
 
-	logger := log.New(os.Stdout, "http: ", log.LstdFlags)
-	logger.Println("Server is starting...")
+	logger.Printf("Server is starting at ::%v...\n", port)
 
 	httpServer := &http.Server{
 		Handler: logging(logger)(router),
 	}
 
-	go httpServer.Serve(httpL)
-	go server.ListenAndServe(rtmpL)
+	go func() {
+		if err := httpServer.Serve(httpL); err != nil {
+			log.Println("Error serve http:", err)
+		}
+	}()
+	go func() {
+		if err := server.ListenAndServe(rtmpL); err != nil {
+			log.Println("Error serve rtmp:", err)
+		}
+	}()
 
-	m.Serve()
+	if err := m.Serve(); err != nil {
+		log.Println("Error serve:", err)
+	}
 }
 
 func logging(logger *log.Logger) func(http.Handler) http.Handler {
