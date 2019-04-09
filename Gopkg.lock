@@ -3,30 +3,14 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/jkuri/http-rtmp-multiplex-server"
+  packages = ["rtmp"]
+  revision = "c0075e16a04b42f933aea2e5025c44b0a7705829"
+
+[[projects]]
+  branch = "master"
   name = "github.com/nareix/joy4"
-  packages = [
-    "av",
-    "av/avutil",
-    "av/pktque",
-    "av/pubsub",
-    "codec",
-    "codec/aacparser",
-    "codec/fake",
-    "codec/h264parser",
-    "format",
-    "format/aac",
-    "format/flv",
-    "format/flv/flvio",
-    "format/mp4",
-    "format/mp4/mp4io",
-    "format/rtmp",
-    "format/rtsp",
-    "format/rtsp/sdp",
-    "format/ts",
-    "format/ts/tsio",
-    "utils/bits",
-    "utils/bits/pio"
-  ]
+  packages = ["av","av/avutil","av/pktque","av/pubsub","codec","codec/aacparser","codec/fake","codec/h264parser","format","format/aac","format/flv","format/flv/flvio","format/mp4","format/mp4/mp4io","format/rtmp","format/rtsp","format/rtsp/sdp","format/ts","format/ts/tsio","utils/bits","utils/bits/pio"]
   revision = "f98bf9bd9e1f1c9dd66dde2d7776871242ca2ba8"
 
 [[projects]]
@@ -38,38 +22,18 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = [
-    "http/httpguts",
-    "http2",
-    "http2/hpack",
-    "idna"
-  ]
+  packages = ["http/httpguts","http2","http2/hpack","idna"]
   revision = "4cb1c02c05b0e749b0365f61ae859a8e0cfceed9"
 
 [[projects]]
   name = "golang.org/x/text"
-  packages = [
-    "collate",
-    "collate/build",
-    "internal/colltab",
-    "internal/gen",
-    "internal/tag",
-    "internal/triegen",
-    "internal/ucd",
-    "language",
-    "secure/bidirule",
-    "transform",
-    "unicode/bidi",
-    "unicode/cldr",
-    "unicode/norm",
-    "unicode/rangetable"
-  ]
+  packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9c7a18cfaf84696b7eaa24386e6ae6d2bcb4facc3b86eab0f11f8615bed04aaa"
+  inputs-digest = "c1d823df4acb210d4970c0f19bbe83e1c9b218d22847b434e41fcc1fe0274dae"
   solver-name = "gps-cdcl"
   solver-version = 1
