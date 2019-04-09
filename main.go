@@ -63,12 +63,25 @@ func main() {
 			if err := avutil.CopyFile(conn, ch.que.Latest()); err != nil && err != io.EOF {
 				log.Println("Unable to serve stream:", err)
 			}
-			//cursor := ch.que.Latest()
-			//avutil.CopyFile(conn, cursor)
 		} else {
 			// Keep connect for 2 sec and close
 			log.Println("No such channel yet:", conn.URL.Path)
-			time.Sleep(time.Second * 2)
+			log.Println("Waiting for publishing channel", conn.URL.Path)
+			ticker := time.NewTicker(time.Millisecond * 500)
+			for range ticker.C {
+				l.RLock()
+				ch = channels[conn.URL.Path]
+				l.RUnlock()
+				if ch != nil {
+					break
+				}
+			}
+			ticker.Stop()
+			time.Sleep(time.Millisecond * 2500)
+			if err := avutil.CopyFile(conn, ch.que.Latest()); err != nil && err != io.EOF {
+				log.Println("Unable to serve stream:", err)
+			}
+
 		}
 	}
 
@@ -104,7 +117,7 @@ func main() {
 		}
 
 		l.Lock()
-		logger.Printf("Stopped streaming %v\n", conn.URL.Path)
+		logger.Println("Stopped streaming", conn.URL.Path)
 		delete(channels, conn.URL.Path)
 		l.Unlock()
 		ch.que.Close()
