@@ -77,7 +77,7 @@ func main() {
 				}
 			}
 			ticker.Stop()
-			time.Sleep(time.Millisecond * 2500)
+			time.Sleep(time.Millisecond * 1500)
 			if err := avutil.CopyFile(conn, ch.que.Latest()); err != nil && err != io.EOF {
 				log.Println("Unable to serve stream:", err)
 			}
