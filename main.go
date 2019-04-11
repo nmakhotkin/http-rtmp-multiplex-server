@@ -108,7 +108,7 @@ func main() {
 		if ch == nil {
 			return
 		}
-		logger.Println("Started streaming", conn.URL.Path)
+		log.Println("Started streaming", conn.URL.Path)
 
 		if err := avutil.CopyPackets(ch.que, conn); err == io.EOF {
 			log.Println("Stopped streaming", conn.URL.Path)
@@ -117,7 +117,6 @@ func main() {
 		}
 
 		l.Lock()
-		logger.Println("Stopped streaming", conn.URL.Path)
 		delete(channels, conn.URL.Path)
 		l.Unlock()
 		ch.que.Close()
@@ -160,7 +159,7 @@ func main() {
 	httpL := m.Match(cmux.HTTP1Fast())
 	rtmpL := m.Match(cmux.Any())
 
-	logger.Printf("Server is starting at ::%v...\n", port)
+	log.Printf("Server is starting at ::%v...\n", port)
 
 	httpServer := &http.Server{
 		Handler: logging(logger)(router),
@@ -182,11 +181,11 @@ func main() {
 	}
 }
 
-func logging(logger *log.Logger) func(http.Handler) http.Handler {
+func logging(log *log.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
-				logger.Println(r.Method, r.URL.Path, r.RemoteAddr, r.UserAgent())
+				log.Println(r.Method, r.URL.Path, r.RemoteAddr, r.UserAgent())
 			}()
 			next.ServeHTTP(w, r)
 		})
