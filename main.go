@@ -64,24 +64,35 @@ func main() {
 				log.Println("Unable to serve stream:", err)
 			}
 		} else {
-			// Keep connect for 2 sec and close
+			// Keep connect for 60 sec and close
 			log.Println("No such channel yet:", conn.URL.Path)
 			log.Println("Waiting for publishing channel", conn.URL.Path)
 			ticker := time.NewTicker(time.Millisecond * 500)
-			for range ticker.C {
-				l.RLock()
-				ch = channels[conn.URL.Path]
-				l.RUnlock()
-				if ch != nil {
+			timeout := time.NewTicker(time.Minute)
+			fall := false
+			for {
+				select {
+				case <- ticker.C:
+					l.RLock()
+					ch = channels[conn.URL.Path]
+					l.RUnlock()
+					if ch != nil {
+						fall = true
+					}
+				case <- timeout.C:
+					ticker.Stop()
+					timeout.Stop()
+					return
+				}
+				if fall {
 					break
 				}
 			}
 			ticker.Stop()
-			time.Sleep(time.Millisecond * 1500)
+			timeout.Stop()
 			if err := avutil.CopyFile(conn, ch.que.Latest()); err != nil && err != io.EOF {
 				log.Println("Unable to serve stream:", err)
 			}
-
 		}
 	}
 
